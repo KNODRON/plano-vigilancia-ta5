@@ -74,9 +74,22 @@
   );
 
   const map = L.map('map', {
-    zoomControl: true,
+    zoomControl: false,
     layers: [esriSat]
   }).setView(SITE_CENTER, 17);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  const NorthControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: function () {
+    const div = L.DomUtil.create('div', 'north-control');
+    div.innerHTML = '<div class="north-arrow"></div><div class="north-letter">N</div>';
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  }
+});
+(new NorthControl()).addTo(map);
 
   // Layers
   const layerPerimetro = L.layerGroup().addTo(map);
@@ -110,12 +123,12 @@
   });
 
   // Data from Excel (embedded)
-  const PERIMETRO = [[-33.561981, -71.532936], [-33.561858, -71.530717], [-33.563768, -71.5329], [-33.56363, -71.530653], [-33.565047, -71.53064], [-33.565159, -71.52788], [-33.563724, -71.527821], [-33.563569, -71.532922], [-33.563437, -71.530725], [-33.563666, -71.52971]];
+  const PERIMETRO = [[-33.561849, -71.530684], [-33.563646, -71.530721], [-33.563726,	-71.527809], [-33.565268,	-71.527894], [-33.565031,	-71.530695], [-33.563646,	-71.530721], [-33.56378, -71.532907], [-33.56196,	-71.532962], [-33.561849,	-71.530684]];
   const GATES = [{"id": "Gate 1", "lat": -33.563702, "lon": -71.53287}, {"id": "Gate 2", "lat": -33.563538, "lon": -71.530689}, {"id": "Gate 3", "lat": -33.563691, "lon": -71.529562}];
   const GARITAS = [{"id": "Garita 1", "lat": -33.563455, "lon": -71.532766}, {"id": "Garita 2", "lat": -33.563365, "lon": -71.530831}, {"id": "Garita 3", "lat": -33.563737, "lon": -71.529805}];
   const OFICINAS = {"lat": -33.562765, "lon": -71.532688};
   const CAMARAS = [{"id": "C1", "name": "C1 \u2013 C\u00e1mara fija", "lat": -33.561988, "lon": -71.53289, "heading": 131.0, "fov": 80, "range_m": 90}, {"id": "C2", "name": "C2 \u2013 C\u00e1mara fija", "lat": -33.561903, "lon": -71.530689, "heading": 180.0, "fov": 80, "range_m": 90}, {"id": "C3", "name": "C3 \u2013 C\u00e1mara fija", "lat": -33.563753, "lon": -71.53279, "heading": 84.5, "fov": 80, "range_m": 90}, {"id": "C4", "name": "C4 \u2013 C\u00e1mara fija", "lat": -33.563594, "lon": -71.530749, "heading": 78.3, "fov": 80, "range_m": 90}, {"id": "C5", "name": "C5 \u2013 C\u00e1mara fija", "lat": -33.563665, "lon": -71.530535, "heading": 302.1, "fov": 80, "range_m": 90}, {"id": "C6", "name": "C6 \u2013 C\u00e1mara fija", "lat": -33.564979, "lon": -71.530605, "heading": 357.1, "fov": 80, "range_m": 90}, {"id": "C7", "name": "C7 \u2013 C\u00e1mara fija", "lat": -33.565056, "lon": -71.527887, "heading": 302.2, "fov": 80, "range_m": 90}, {"id": "C8", "name": "C8 \u2013 C\u00e1mara fija", "lat": -33.563761, "lon": -71.527873, "heading": 274.3, "fov": 80, "range_m": 90}, {"id": "C9", "name": "C9 \u2013 C\u00e1mara fija", "lat": -33.563207, "lon": -71.530802, "heading": 166.1, "fov": 80, "range_m": 90}];
-  const PTZ = {"lat": -33.56379, "lon": -71.528023, "radius_m": 180};
+  const PTZ = {"lat": -33,563154, "lon": -71,530796, "radius_m": 200};
 
   // Helpers
   function sectorPolygon(lat, lon, headingDeg, fovDeg, rangeDeg, steps=28) {
