@@ -1,0 +1,20 @@
+.north-control {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+.north-arrow {
+  width: 0; height: 0;
+  margin: 6px auto 2px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid #111;
+}
+.north-letter { margin-top: 2px; }
