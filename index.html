@@ -42,9 +42,8 @@
   <div class="panel">
     <h1>Plano interactivo – Sistema de Vigilancia (Caso TA_5)</h1>
     <div class="sub">
-      Ubicación: Barrio Industrial Malvilla – Los Morros, San Antonio<br>
-      Centro del predio: <b>-33.563584, -71.530690</b><br>
-      Vista: <b>Satelital</b> (puedes cambiar en el control de capas)
+      Ubicación: Camino a Malvilla S/N, Km 101, Ruta 78<br>
+      Vista: <b>Satelital</b> (se puede cambiar en el control de capas arriba a la derecha)
     </div>
     <div>
       <span class="badge">Perímetro (rojo)</span>
@@ -56,8 +55,16 @@
       <span class="badge">PTZ</span>
     </div>
     <div class="note">
-      Coordenadas cargadas desde tu planilla. Los conos (cámaras fijas) se orientan automáticamente hacia el interior (centro del predio),
-      para asegurar cobertura interna y control perimetral.
+      SISTEMAS DE VIGILANCIA
+      </div>
+    <div class="note">
+      SISTEMAS DE VIGILANCIA
+      </div>
+    <div class="note">
+      Profesor: CRISTIAN R. CLAVERIA POBLETE
+      </div>
+    <div class="note">
+      Alumno: JUAN E. JIMENEZ VALDIVIA
     </div>
   </div>
 
@@ -81,7 +88,7 @@
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   const NorthControl = L.Control.extend({
-  options: { position: 'bottomright' },
+  options: { position: 'bottomleft' },
   onAdd: function () {
     const div = L.DomUtil.create('div', 'north-control');
     div.innerHTML = '<div class="north-arrow"></div><div class="north-letter">N</div>';
