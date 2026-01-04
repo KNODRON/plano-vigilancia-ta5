@@ -76,7 +76,7 @@
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   const NorthControl = L.Control.extend({
-  options: { position: 'bottomleft' },
+  options: { position: 'bottomright' },
   onAdd: function () {
     const div = L.DomUtil.create('div', 'north-control');
     div.innerHTML = '<div class="north-arrow"></div><div class="north-letter">N</div>';
@@ -147,7 +147,7 @@
   if (PERIMETRO.length >= 3) {
     const poly = L.polyline(PERIMETRO.concat([PERIMETRO[0]]), {
       color: "#ff0000", weight: 3, opacity: 0.95
-    }).bindPopup("<b>Perímetro del predio</b><br>Línea roja (según tu planilla)").addTo(layerPerimetro);
+    }).bindPopup("<b>Perímetro del predio</b><br>Línea roja").addTo(layerPerimetro);
 
     map.fitBounds(poly.getBounds().pad(0.15));
   }
