@@ -5,318 +5,217 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Plano Interactivo – Sistema de Vigilancia (TA_5) | San Antonio</title>
 
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <style>
     html, body { height: 100%; margin: 0; }
     #map { height: 100%; }
-
     .panel {
       position: absolute; top: 12px; left: 12px; z-index: 999;
       background: rgba(255,255,255,0.95);
       padding: 10px 12px; border-radius: 10px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.18);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      max-width: 380px;
+      max-width: 420px;
     }
     .panel h1 { font-size: 14px; margin: 0 0 6px; }
     .panel .sub { font-size: 12px; margin: 0 0 8px; color: #333; line-height: 1.25; }
-    .badges { display:flex; flex-wrap:wrap; gap:6px; margin: 6px 0 0; }
-    .badge {
-      display:inline-block; padding:2px 8px; border-radius: 999px;
-      border:1px solid #ddd; font-size: 11px; background: #fff;
-    }
+    .badge { display:inline-block; padding:2px 8px; border-radius: 999px;
+      border:1px solid #ddd; font-size: 11px; background: #fff; margin-right:6px; margin-bottom:6px; }
     .note { font-size: 11px; margin-top: 8px; color: #444; line-height: 1.25; }
-
-    /* Tooltip simple para labels permanentes */
     .label {
       background: rgba(255,255,255,0.92);
       border: 1px solid rgba(0,0,0,0.15);
       border-radius: 6px;
       padding: 2px 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: #111;
     }
   </style>
 </head>
-
 <body>
   <div id="map"></div>
-
   <div class="panel">
     <h1>Plano interactivo – Sistema de Vigilancia (Caso TA_5)</h1>
     <div class="sub">
       Ubicación: Barrio Industrial Malvilla – Los Morros, San Antonio<br>
-      Centro del predio: <b>-33.563395, -71.530430</b><br>
+      Centro del predio: <b>-33.563584, -71.530690</b><br>
       Vista: <b>Satelital</b> (puedes cambiar en el control de capas)
     </div>
-    <div class="badges">
-      <span class="badge">Satelital</span>
-      <span class="badge">Sectores</span>
+    <div>
+      <span class="badge">Perímetro (rojo)</span>
       <span class="badge">Gates</span>
+      <span class="badge">Oficinas</span>
       <span class="badge">Garitas</span>
       <span class="badge">CCTV</span>
-      <span class="badge">Conos (ángulo)</span>
+      <span class="badge">Conos (FOV)</span>
       <span class="badge">PTZ</span>
     </div>
     <div class="note">
-      Plano <b>referencial</b> para efectos académicos. Sectores ajustados según esquema del profesor
-      (Oficinas/Gate 1, corredor Gate 2 y área operativa/Gate 3).
+      Coordenadas cargadas desde tu planilla. Los conos (cámaras fijas) se orientan automáticamente hacia el interior (centro del predio),
+      para asegurar cobertura interna y control perimetral.
     </div>
   </div>
 
 <script>
-/** =========================
- *  Coordenada exacta (centro del predio)
- *  ========================= */
-const SITE_LAT = -33.563395;
-const SITE_LON = -71.530430;
+  const SITE_CENTER = [-33.563584, -71.530690];
 
-/** =========================
- *  Base maps (SATELITAL + MAPA)
- *  ========================= */
-const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap'
-});
+  // Basemaps
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; OpenStreetMap'
+  });
+  const esriSat = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Tiles &copy; Esri' }
+  );
 
-// ESRI World Imagery (satelital)
-const esriSat = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  { maxZoom: 19, attribution: 'Tiles &copy; Esri' }
-);
+  const map = L.map('map', {
+    zoomControl: true,
+    layers: [esriSat]
+  }).setView(SITE_CENTER, 17);
 
-// Mapa
-const map = L.map('map', {
-  zoomControl: true,
-  layers: [esriSat] // por defecto satelital
-}).setView([SITE_LAT, SITE_LON], 17);
+  // Layers
+  const layerPerimetro = L.layerGroup().addTo(map);
+  const layerGates     = L.layerGroup().addTo(map);
+  const layerOficinas  = L.layerGroup().addTo(map);
+  const layerGaritas   = L.layerGroup().addTo(map);
+  const layerCCTV      = L.layerGroup().addTo(map);
+  const layerPTZ       = L.layerGroup().addTo(map);
+  const layerConos     = L.layerGroup().addTo(map);
 
-/** =========================
- *  Capas (overlays)
- *  ========================= */
-const layerSectores = L.layerGroup().addTo(map);
-const layerGates     = L.layerGroup().addTo(map);
-const layerGaritas   = L.layerGroup().addTo(map);
-const layerOficinas  = L.layerGroup().addTo(map);
-const layerCamaras   = L.layerGroup().addTo(map);
-const layerPTZ       = L.layerGroup().addTo(map);
-const layerConos     = L.layerGroup().addTo(map);
+  // Icons (colores)
+  const iconGate = new L.Icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
+  });
+  const iconOficina = new L.Icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
+  });
+  const iconCCTV = new L.Icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
+  });
+  const iconPTZ = new L.Icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
+  });
 
-/** =========================
- *  Utilidades
- *  ========================= */
-function offsetLatLon(lat, lon, dLat, dLon){ return [lat + dLat, lon + dLon]; }
-function deg2rad(d){ return d * Math.PI / 180; }
-function sectorPolygon(lat, lon, headingDeg, fovDeg, rangeDeg, steps=28) {
-  const pts = [[lat, lon]];
-  const start = headingDeg - (fovDeg/2);
-  const end   = headingDeg + (fovDeg/2);
-  for (let i=0;i<=steps;i++){
-    const ang = start + (i*(end-start)/steps);
-    const a = deg2rad(ang);
-    const dLat = rangeDeg * Math.cos(a);
-    const dLon = rangeDeg * Math.sin(a);
-    pts.push([lat + dLat, lon + dLon]);
+  // Data from Excel (embedded)
+  const PERIMETRO = [[-33.561981, -71.532936], [-33.561858, -71.530717], [-33.563768, -71.5329], [-33.56363, -71.530653], [-33.565047, -71.53064], [-33.565159, -71.52788], [-33.563724, -71.527821], [-33.563569, -71.532922], [-33.563437, -71.530725], [-33.563666, -71.52971]];
+  const GATES = [{"id": "Gate 1", "lat": -33.563702, "lon": -71.53287}, {"id": "Gate 2", "lat": -33.563538, "lon": -71.530689}, {"id": "Gate 3", "lat": -33.563691, "lon": -71.529562}];
+  const GARITAS = [{"id": "Garita 1", "lat": -33.563455, "lon": -71.532766}, {"id": "Garita 2", "lat": -33.563365, "lon": -71.530831}, {"id": "Garita 3", "lat": -33.563737, "lon": -71.529805}];
+  const OFICINAS = {"lat": -33.562765, "lon": -71.532688};
+  const CAMARAS = [{"id": "C1", "name": "C1 \u2013 C\u00e1mara fija", "lat": -33.561988, "lon": -71.53289, "heading": 131.0, "fov": 80, "range_m": 90}, {"id": "C2", "name": "C2 \u2013 C\u00e1mara fija", "lat": -33.561903, "lon": -71.530689, "heading": 180.0, "fov": 80, "range_m": 90}, {"id": "C3", "name": "C3 \u2013 C\u00e1mara fija", "lat": -33.563753, "lon": -71.53279, "heading": 84.5, "fov": 80, "range_m": 90}, {"id": "C4", "name": "C4 \u2013 C\u00e1mara fija", "lat": -33.563594, "lon": -71.530749, "heading": 78.3, "fov": 80, "range_m": 90}, {"id": "C5", "name": "C5 \u2013 C\u00e1mara fija", "lat": -33.563665, "lon": -71.530535, "heading": 302.1, "fov": 80, "range_m": 90}, {"id": "C6", "name": "C6 \u2013 C\u00e1mara fija", "lat": -33.564979, "lon": -71.530605, "heading": 357.1, "fov": 80, "range_m": 90}, {"id": "C7", "name": "C7 \u2013 C\u00e1mara fija", "lat": -33.565056, "lon": -71.527887, "heading": 302.2, "fov": 80, "range_m": 90}, {"id": "C8", "name": "C8 \u2013 C\u00e1mara fija", "lat": -33.563761, "lon": -71.527873, "heading": 274.3, "fov": 80, "range_m": 90}, {"id": "C9", "name": "C9 \u2013 C\u00e1mara fija", "lat": -33.563207, "lon": -71.530802, "heading": 166.1, "fov": 80, "range_m": 90}];
+  const PTZ = {"lat": -33.56379, "lon": -71.528023, "radius_m": 180};
+
+  // Helpers
+  function sectorPolygon(lat, lon, headingDeg, fovDeg, rangeDeg, steps=28) {
+    const pts = [[lat, lon]];
+    const start = headingDeg - (fovDeg/2);
+    const end   = headingDeg + (fovDeg/2);
+    const toRad = (d) => d * Math.PI / 180;
+
+    for (let i=0;i<=steps;i++) {
+      const ang = start + (i*(end-start)/steps);
+      const a = toRad(ang);
+      const dLat = rangeDeg * Math.cos(a);
+      const dLon = rangeDeg * Math.sin(a);
+      pts.push([lat + dLat, lon + dLon]);
+    }
+    pts.push([lat, lon]);
+    return pts;
   }
-  pts.push([lat, lon]);
-  return pts;
-}
 
-/** =========================
- *  Iconos (puedes cambiarlos por PNG propios luego)
- *  ========================= */
-const iconGate = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
-});
+  // 1) Perímetro (línea roja)
+  if (PERIMETRO.length >= 3) {
+    const poly = L.polyline(PERIMETRO.concat([PERIMETRO[0]]), {
+      color: "#ff0000", weight: 3, opacity: 0.95
+    }).bindPopup("<b>Perímetro del predio</b><br>Línea roja (según tu planilla)").addTo(layerPerimetro);
 
-const iconOficina = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
-});
+    map.fitBounds(poly.getBounds().pad(0.15));
+  }
 
-const iconCCTV = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
-});
+  // 2) Gates
+  GATES.forEach(g => {
+    L.marker([g.lat, g.lon], { icon: iconGate })
+      .bindPopup(`<b>${g.id}</b>`)
+      .bindTooltip(g.id, { permanent:true, direction:"right", className:"label", offset:[10,0] })
+      .addTo(layerGates);
+  });
 
-const iconPTZ = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowSize: [41,41]
-});
+  // 3) Oficinas
+  if (OFICINAS) {
+    L.marker([OFICINAS.lat, OFICINAS.lon], { icon: iconOficina })
+      .bindPopup("<b>Oficinas</b>")
+      .bindTooltip("Oficinas", { permanent:true, direction:"right", className:"label", offset:[10,0] })
+      .addTo(layerOficinas);
+  }
 
-/** =========================
- *  1) Sectores (según plano del profe) – Referencial
- *  - Sector A: Oficinas + Gate 1 (izquierda)
- *  - Corredor central: Gate 2 (conexión/operación)
- *  - Sector B: Área operativa + Gate 3 (derecha)
- *  ========================= */
+  // 4) Garitas
+  GARITAS.forEach(g => {
+    L.circleMarker([g.lat, g.lon], { radius: 8, weight: 2, fillOpacity: 0.85 })
+      .bindPopup(`<b>${g.id}</b>`)
+      .bindTooltip(g.id, { permanent:true, direction:"left", className:"label", offset:[-10,0] })
+      .addTo(layerGaritas);
+  });
 
-// Sector A (Oficinas / Gate 1) – polígono tipo “bloque izquierdo”
-const A1 = offsetLatLon(SITE_LAT, SITE_LON,  0.00055, -0.00130);
-const A2 = offsetLatLon(SITE_LAT, SITE_LON,  0.00055, -0.00035);
-const A3 = offsetLatLon(SITE_LAT, SITE_LON, -0.00035, -0.00035);
-const A4 = offsetLatLon(SITE_LAT, SITE_LON, -0.00035, -0.00130);
+  // 5) Cámaras fijas + conos (FOV)
+  //    Nota: rangeDeg aproximado. 0.00090 ~ 100m en lat.
+  function metersToDeg(m) {
+    return m / 111000; // aproximación
+  }
 
-const sectorA = L.polygon([A1,A2,A3,A4], { color:"#ff0000", weight:2, fillOpacity:0.08 })
-  .bindPopup("<b>Sector A (Oficinas / Gate 1)</b><br>Cobertura prioritaria de acceso y administrativo")
-  .addTo(layerSectores);
+  CAMARAS.forEach(c => {
+    L.marker([c.lat, c.lon], { icon: iconCCTV })
+      .bindPopup(`<b>${c.name}</b><br>FOV: ${c.fov}°<br>Heading: ${c.heading}°<br>Alcance: ${c.range_m}m`)
+      .bindTooltip(c.id, { permanent:true, direction:"top", className:"label", offset:[0,-10] })
+      .addTo(layerCCTV);
 
-// Corredor (Gate 2) – franja central superior
-const C1 = offsetLatLon(SITE_LAT, SITE_LON,  0.00065, -0.00035);
-const C2 = offsetLatLon(SITE_LAT, SITE_LON,  0.00065,  0.00055);
-const C3 = offsetLatLon(SITE_LAT, SITE_LON,  0.00025,  0.00055);
-const C4 = offsetLatLon(SITE_LAT, SITE_LON,  0.00025, -0.00035);
+    const rangeDeg = metersToDeg(c.range_m);
+    const poly = sectorPolygon(c.lat, c.lon, c.heading, c.fov, rangeDeg);
+    L.polygon(poly, { weight: 1, fillOpacity: 0.18 })
+      .bindPopup(`<b>Cono (FOV)</b><br>${c.name}`)
+      .addTo(layerConos);
+  });
 
-const corredor = L.polygon([C1,C2,C3,C4], { color:"#ff0000", weight:2, fillOpacity:0.08 })
-  .bindPopup("<b>Corredor operativo (Gate 2)</b><br>Zona de tránsito/conexión y control")
-  .addTo(layerSectores);
+  // 6) PTZ (círculo de cobertura)
+  if (PTZ) {
+    L.marker([PTZ.lat, PTZ.lon], { icon: iconPTZ })
+      .bindPopup(`<b>PTZ</b><br>Cobertura referencial: ${PTZ.radius_m}m`)
+      .bindTooltip("PTZ", { permanent:true, direction:"right", className:"label", offset:[10,0] })
+      .addTo(layerPTZ);
 
-// Sector B (Operativo / Gate 3) – polígono tipo “bloque derecho”
-const B1 = offsetLatLon(SITE_LAT, SITE_LON,  0.00065,  0.00055);
-const B2 = offsetLatLon(SITE_LAT, SITE_LON,  0.00065,  0.00155);
-const B3 = offsetLatLon(SITE_LAT, SITE_LON, -0.00065,  0.00155);
-const B4 = offsetLatLon(SITE_LAT, SITE_LON, -0.00065,  0.00055);
+    L.circle([PTZ.lat, PTZ.lon], {
+      radius: PTZ.radius_m,
+      weight: 2,
+      fillOpacity: 0.08
+    }).bindPopup("<b>Cobertura PTZ</b><br>(referencial)").addTo(layerPTZ);
+  }
 
-const sectorB = L.polygon([B1,B2,B3,B4], { color:"#ff0000", weight:2, fillOpacity:0.08 })
-  .bindPopup("<b>Sector B (Área operativa / Gate 3)</b><br>Patios, operación y resguardo de carga")
-  .addTo(layerSectores);
-
-/** =========================
- *  2) Gates (posiciones alineadas a sectores)
- *  ========================= */
-const gates = [
-  { id:"Gate 1", lat: SITE_LAT - 0.00020, lon: SITE_LON - 0.00110, desc:"Acceso asociado a oficinas (sector A)" },
-  { id:"Gate 2", lat: SITE_LAT + 0.00045, lon: SITE_LON + 0.00010, desc:"Acceso / punto de control en corredor" },
-  { id:"Gate 3", lat: SITE_LAT + 0.00020, lon: SITE_LON + 0.00110, desc:"Acceso asociado a sector operativo (sector B)" },
-];
-
-gates.forEach(g => {
-  L.marker([g.lat, g.lon], { icon: iconGate })
-    .bindPopup(`<b>${g.id}</b><br>${g.desc}`)
-    .bindTooltip(g.id, { permanent:true, direction:"right", className:"label", offset:[10,0] })
-    .addTo(layerGates);
-});
-
-/** =========================
- *  3) Oficinas (marcador)
- *  ========================= */
-const oficinas = { lat: SITE_LAT + 0.00025, lon: SITE_LON - 0.00095 };
-L.marker([oficinas.lat, oficinas.lon], { icon: iconOficina })
-  .bindPopup("<b>Oficinas</b><br>Zona administrativa (según plano del profesor)")
-  .bindTooltip("Oficinas", { permanent:true, direction:"right", className:"label", offset:[10,0] })
-  .addTo(layerOficinas);
-
-/** =========================
- *  4) Garitas (circleMarker para diferenciar de Gates)
- *  ========================= */
-const garitas = [
-  { id:"Garita G1", lat: gates[0].lat + 0.00010, lon: gates[0].lon + 0.00012, desc:"2 GGSS/turno (control + apoyo monitoreo)" },
-  { id:"Garita G2", lat: gates[1].lat + 0.00008, lon: gates[1].lon - 0.00010, desc:"1 GGSS/turno (control corredor/Gate 2)" },
-  { id:"Garita G3", lat: gates[2].lat - 0.00010, lon: gates[2].lon + 0.00012, desc:"1 GGSS/turno (control sector B)" },
-];
-
-garitas.forEach(g => {
-  L.circleMarker([g.lat, g.lon], { radius: 8, weight: 2, fillOpacity: 0.8 })
-    .bindPopup(`<b>${g.id}</b><br>${g.desc}`)
-    .bindTooltip(g.id, { permanent:true, direction:"left", className:"label", offset:[-10,0] })
-    .addTo(layerGaritas);
-});
-
-/** =========================
- *  5) Cámaras fijas + conos (FOV)
- *  - Accesos + perímetro por sectores (A y B) + apoyo en corredor
- *  ========================= */
-const camaras = [
-  // Accesos
-  { id:"C1 – CCTV Gate 1", tipo:"Fija", lat:gates[0].lat, lon:gates[0].lon, heading: 30,  fov: 70, range: 0.00055, nota:"Registro ingreso/egreso (Sector A)" },
-  { id:"C2 – CCTV Gate 2", tipo:"Fija", lat:gates[1].lat, lon:gates[1].lon, heading: 180, fov: 80, range: 0.00060, nota:"Control corredor / tránsito" },
-  { id:"C3 – CCTV Gate 3", tipo:"Fija", lat:gates[2].lat, lon:gates[2].lon, heading: 210, fov: 70, range: 0.00055, nota:"Registro ingreso/egreso (Sector B)" },
-
-  // Sector A (4 puntos esquinas)
-  { id:"C4 – Perímetro A (N-O)", tipo:"Fija", lat:A1[0], lon:A1[1], heading: 120, fov: 80, range: 0.00075, nota:"Cobertura perimetral Sector A" },
-  { id:"C5 – Perímetro A (N-E)", tipo:"Fija", lat:A2[0], lon:A2[1], heading: 220, fov: 80, range: 0.00075, nota:"Cobertura perimetral Sector A" },
-  { id:"C6 – Perímetro A (S-E)", tipo:"Fija", lat:A3[0], lon:A3[1], heading: 320, fov: 80, range: 0.00075, nota:"Cobertura perimetral Sector A" },
-  { id:"C7 – Perímetro A (S-O)", tipo:"Fija", lat:A4[0], lon:A4[1], heading: 40,  fov: 80, range: 0.00075, nota:"Cobertura perimetral Sector A" },
-
-  // Sector B (4 puntos esquinas)
-  { id:"C8 – Perímetro B (N-O)", tipo:"Fija", lat:B1[0], lon:B1[1], heading: 140, fov: 80, range: 0.00085, nota:"Cobertura perimetral Sector B" },
-  { id:"C9 – Perímetro B (N-E)", tipo:"Fija", lat:B2[0], lon:B2[1], heading: 230, fov: 80, range: 0.00085, nota:"Cobertura perimetral Sector B" },
-  { id:"C10 – Perímetro B (S-E)", tipo:"Fija", lat:B3[0], lon:B3[1], heading: 310, fov: 80, range: 0.00085, nota:"Cobertura perimetral Sector B" },
-  { id:"C11 – Perímetro B (S-O)", tipo:"Fija", lat:B4[0], lon:B4[1], heading: 50,  fov: 80, range: 0.00085, nota:"Cobertura perimetral Sector B" },
-];
-
-camaras.forEach(c => {
-  L.marker([c.lat, c.lon], { icon: iconCCTV })
-    .bindPopup(`<b>${c.id}</b><br>Tipo: ${c.tipo}<br>FOV: ${c.fov}°<br>${c.nota}`)
-    .addTo(layerCamaras);
-
-  L.polygon(sectorPolygon(c.lat, c.lon, c.heading, c.fov, c.range), { weight: 1, fillOpacity: 0.16 })
-    .bindPopup(`<b>Ángulo (FOV)</b><br>${c.id}<br>Dirección: ${c.heading}°<br>Apertura: ${c.fov}°`)
-    .addTo(layerConos);
-});
-
-/** =========================
- *  6) PTZ (Sector B, patio operativo)
- *  ========================= */
-const ptz = {
-  id: "PTZ – Patio Operativo",
-  lat: SITE_LAT + 0.00005,
-  lon: SITE_LON + 0.00100,
-  fov: 110,
-  heading: 200,
-  range: 0.00110,
-  desc: "Seguimiento dinámico y verificación de eventos en patios (Sector B)"
-};
-
-L.marker([ptz.lat, ptz.lon], { icon: iconPTZ })
-  .bindPopup(`<b>${ptz.id}</b><br>${ptz.desc}<br>FOV: ${ptz.fov}°`)
-  .addTo(layerPTZ);
-
-L.polygon(sectorPolygon(ptz.lat, ptz.lon, ptz.heading, ptz.fov, ptz.range), { weight: 1, fillOpacity: 0.12 })
-  .bindPopup(`<b>Ángulo PTZ (referencial)</b><br>${ptz.id}`)
-  .addTo(layerConos);
-
-/** =========================
- *  Control de capas (BASEMAP + OVERLAYS)
- *  ========================= */
-const baseMaps = {
-  "Satelital (Esri)": esriSat,
-  "Mapa (OSM)": osm
-};
-
-const overlays = {
-  "Sectores (según plano profe)": layerSectores,
-  "Gates": layerGates,
-  "Garitas": layerGaritas,
-  "Oficinas": layerOficinas,
-  "Cámaras (CCTV)": layerCamaras,
-  "PTZ": layerPTZ,
-  "Conos / Ángulos (FOV)": layerConos
-};
-
-L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
-
-// encuadre a todo el conjunto (sectores A+B)
-const allBounds = L.featureGroup([sectorA, corredor, sectorB]).getBounds();
-map.fitBounds(allBounds.pad(0.15));
+  // Layer control
+  const baseMaps = {
+    "Satelital (Esri)": esriSat,
+    "Mapa (OSM)": osm
+  };
+  const overlays = {
+    "Perímetro (rojo)": layerPerimetro,
+    "Gates": layerGates,
+    "Oficinas": layerOficinas,
+    "Garitas": layerGaritas,
+    "Cámaras (CCTV)": layerCCTV,
+    "Conos / Ángulos (FOV)": layerConos,
+    "PTZ": layerPTZ
+  };
+  L.control.layers(baseMaps, overlays, { collapsed: false }).addTo(map);
 </script>
 </body>
 </html>
