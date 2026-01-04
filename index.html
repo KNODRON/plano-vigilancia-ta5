@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plano Interactivo – Sistema de Vigilancia (TA_5) | San Antonio</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; }
+
+    .panel {
+      position: absolute; top: 12px; left: 12px; z-index: 999;
+      background: rgba(255,255,255,0.95);
+      padding: 10px 12px; border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      max-width: 360px;
+    }
+    .panel h1 { font-size: 14px; margin: 0 0 6px; }
+    .panel .sub { font-size: 12px; margin: 0 0 8px; color: #333; line-height: 1.25; }
+    .badges { display:flex; flex-wrap:wrap; gap:6px; margin: 6px 0 0; }
+    .badge {
+      display:inline-block; padding:2px 8px; border-radius: 999px;
+      border:1px solid #ddd; font-size: 11px; background: #fff;
+    }
+    .note { font-size: 11px; margin-top: 8px; color: #444; line-height: 1.25; }
+    .small { font-size: 11px; color: #555; margin-top: 6px; }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <div class="panel">
+    <h1>Plano interactivo – Sistema de Vigilancia (Caso TA_5)</h1>
+    <div class="sub">
+      Ubicación: Barrio Industrial Malvilla – Los Morros, San Antonio<br>
+      Centro del predio: <b>-33.563395, -71.530430</b>
+    </div>
+    <div class="badges">
+      <span class="badge">Perímetro</span>
+      <span class="badge">Gates</span>
+      <span class="badge">Garitas</span>
+      <span class="badge">CCTV</span>
+      <span class="badge">Conos (ángulo)</span>
+      <span class="badge">PTZ</span>
+    </div>
+    <div class="note">
+      Este plano es <b>referencial</b> para efectos académicos: ubica componentes del sistema (CCTV + guardias)
+      coherentes con el diagnóstico del caso TA_5 y la materia del curso.
+    </div>
+    <div class="small">
+      Consejo: usa el control de capas (arriba derecha) para encender/apagar elementos.
+    </div>
+  </div>
+
+<script>
+/** =========================
+ *  Coordenada exacta (centro del predio)
+ *  ========================= */
+const SITE_LAT = -33.563395;
+const SITE_LON = -71.530430;
+
+/** =========================
+ *  Mapa base
+ *  ========================= */
+const map = L.map('map', { zoomControl: true }).setView([SITE_LAT, SITE_LON], 17);
+
+// OpenStreetMap tiles
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+/** =========================
+ *  Capas
+ *  ========================= */
+const layerPerimetro = L.layerGroup().addTo(map);
+const layerGates     = L.layerGroup().addTo(map);
+const layerGaritas   = L.layerGroup().addTo(map);
+const layerCamaras   = L.layerGroup().addTo(map);
+const layerConos     = L.layerGroup().addTo(map);
+const layerPTZ       = L.layerGroup().addTo(map);
+
+/** =========================
+ *  Utilidades
+ *  =========================
+ * offsetLatLon: aproximación local (válida para distancias cortas)
+ * dLat, dLon en grados (~0.001 ≈ 111 m en lat; lon varía por latitud)
+ */
+function offsetLatLon(lat, lon, dLat, dLon){ return [lat + dLat, lon + dLon]; }
+function deg2rad(d){ return d * Math.PI / 180; }
+
+/** =========================
+ *  Cono/sector para ángulo de cámara
+ *  heading: 0=N, 90=E, 180=S, 270=O
+ *  fov: apertura en grados
+ *  rangeDeg: alcance aproximado en grados (p.ej. 0.0008 ~ 90 m aprox)
+ *  ========================= */
+function sectorPolygon(lat, lon, headingDeg, fovDeg, rangeDeg, steps=28) {
+  const pts = [[lat, lon]];
+  const start = headingDeg - (fovDeg/2);
+  const end   = headingDeg + (fovDeg/2);
+  for (let i=0;i<=steps;i++){
+    const ang = start + (i*(end-start)/steps);
+    const a = deg2rad(ang);
+    const dLat = rangeDeg * Math.cos(a);
+    const dLon = rangeDeg * Math.sin(a);
+    pts.push([lat + dLat, lon + dLon]);
+  }
+  pts.push([lat, lon]);
+  return pts;
+}
+
+/** =========================
+ *  1) Perímetro referencial (4 ha aprox.)
+ *  - 4 ha ≈ 40.000 m2; un rectángulo ~200m x 200m es una aproximación simple.
+ *  Ajuste: usamos offsets razonables para un “cuadro” académico.
+ *  ========================= */
+const p1 = offsetLatLon(SITE_LAT, SITE_LON,  0.00095, -0.00115);
+const p2 = offsetLatLon(SITE_LAT, SITE_LON,  0.00095,  0.00115);
+const p3 = offsetLatLon(SITE_LAT, SITE_LON, -0.00095,  0.00115);
+const p4 = offsetLatLon(SITE_LAT, SITE_LON, -0.00095, -0.00115);
+
+const perimetro = L.polygon([p1,p2,p3,p4], { weight: 2, fillOpacity: 0.06 })
+  .bindPopup("<b>Perímetro referencial</b><br>Puerto seco (TA_5) – esquema académico (no a escala)")
+  .addTo(layerPerimetro);
+
+/** =========================
+ *  2) Gates y Garitas (posición referencial)
+ *  - Se ubican alrededor del perímetro para representar accesos múltiples (Gate 1, 2, 3)
+ *  ========================= */
+const gates = [
+  { id:"Gate 1", lat: SITE_LAT - 0.00090, lon: SITE_LON - 0.00005, desc:"Acceso principal + puesto de monitoreo" },
+  { id:"Gate 2", lat: SITE_LAT + 0.00020, lon: SITE_LON + 0.00110, desc:"Acceso secundario (reforzado con barrera/portón)" },
+  { id:"Gate 3", lat: SITE_LAT + 0.00055, lon: SITE_LON - 0.00110, desc:"Acceso secundario (reforzado con barrera/portón)" },
+];
+
+gates.forEach(g => {
+  L.marker([g.lat, g.lon]).bindPopup(`<b>${g.id}</b><br>${g.desc}`).addTo(layerGates);
+});
+
+const garitas = [
+  { id:"Garita G1", lat: gates[0].lat + 0.00010, lon: gates[0].lon + 0.00018, desc:"2 GGSS/turno (control + monitoreo CCTV)" },
+  { id:"Garita G2", lat: gates[1].lat + 0.00010, lon: gates[1].lon - 0.00018, desc:"1 GGSS/turno (control acceso secundario)" },
+  { id:"Garita G3", lat: gates[2].lat - 0.00010, lon: gates[2].lon + 0.00018, desc:"1 GGSS/turno (control acceso secundario)" },
+];
+
+garitas.forEach(g => {
+  L.circleMarker([g.lat, g.lon], { radius: 7, weight: 2, fillOpacity: 0.75 })
+    .bindPopup(`<b>${g.id}</b><br>${g.desc}`)
+    .addTo(layerGaritas);
+});
+
+/** =========================
+ *  3) Cámaras fijas (ejemplo coherente con TA_5)
+ *  - Perímetro (esquinas) + accesos + sector administrativo (referencial)
+ *  - Cada cámara dibuja su cono (FOV)
+ *  ========================= */
+const camaras = [
+  // Accesos
+  { id:"C1 – Gate 1", tipo:"Fija", lat:gates[0].lat, lon:gates[0].lon, heading: 0,   fov: 70, range: 0.00085, nota:"Registro ingreso/egreso principal" },
+  { id:"C2 – Gate 2", tipo:"Fija", lat:gates[1].lat, lon:gates[1].lon, heading: 270, fov: 70, range: 0.00085, nota:"Control acceso secundario" },
+  { id:"C3 – Gate 3", tipo:"Fija", lat:gates[2].lat, lon:gates[2].lon, heading: 90,  fov: 70, range: 0.00085, nota:"Control acceso secundario" },
+
+  // Perímetro – esquinas (cobertura cruzada)
+  { id:"C4 – Perímetro N-O", tipo:"Fija", lat:p1[0], lon:p1[1], heading: 135, fov: 80, range: 0.00100, nota:"Cobertura perimetral" },
+  { id:"C5 – Perímetro N-E", tipo:"Fija", lat:p2[0], lon:p2[1], heading: 225, fov: 80, range: 0.00100, nota:"Cobertura perimetral" },
+  { id:"C6 – Perímetro S-E", tipo:"Fija", lat:p3[0], lon:p3[1], heading: 315, fov: 80, range: 0.00100, nota:"Cobertura perimetral" },
+  { id:"C7 – Perímetro S-O", tipo:"Fija", lat:p4[0], lon:p4[1], heading: 45,  fov: 80, range: 0.00100, nota:"Cobertura perimetral" },
+
+  // Sector administrativo (referencial, coherente con que hoy hay cámaras en oficinas)
+  { id:"C8 – Oficinas", tipo:"Fija", lat: SITE_LAT - 0.00015, lon: SITE_LON + 0.00025, heading: 200, fov: 75, range: 0.00070, nota:"Cobertura administrativa/operativa cercana" },
+];
+
+camaras.forEach(c => {
+  // marcador
+  L.circleMarker([c.lat, c.lon], { radius: 6, weight: 2, fillOpacity: 0.9 })
+    .bindPopup(`<b>${c.id}</b><br>Tipo: ${c.tipo}<br>FOV: ${c.fov}°<br>${c.nota}`)
+    .addTo(layerCamaras);
+
+  // cono de visión
+  const poly = sectorPolygon(c.lat, c.lon, c.heading, c.fov, c.range);
+  L.polygon(poly, { weight: 1, fillOpacity: 0.16 })
+    .bindPopup(`<b>Ángulo de cámara</b><br>${c.id}<br>Dirección: ${c.heading}°<br>Apertura: ${c.fov}°`)
+    .addTo(layerConos);
+});
+
+/** =========================
+ *  4) PTZ (patio contenedores – punto alto)
+ *  - Una PTZ central para seguimiento y apoyo a rondas
+ *  ========================= */
+const ptz = {
+  id: "PTZ – Torre Patio",
+  lat: SITE_LAT + 0.00020,
+  lon: SITE_LON - 0.00010,
+  fov: 110,
+  heading: 180,
+  range: 0.00125,
+  desc: "Seguimiento dinámico de patios/zonas críticas (apoyo a vigilancia humana)"
+};
+
+// marcador PTZ
+L.circleMarker([ptz.lat, ptz.lon], { radius: 8, weight: 2, fillOpacity: 0.9 })
+  .bindPopup(`<b>${ptz.id}</b><br>Tipo: PTZ<br>FOV: ${ptz.fov}°<br>${ptz.desc}`)
+  .addTo(layerPTZ);
+
+// cono PTZ (representación)
+L.polygon(sectorPolygon(ptz.lat, ptz.lon, ptz.heading, ptz.fov, ptz.range), { weight: 1, fillOpacity: 0.12 })
+  .bindPopup(`<b>Ángulo PTZ (referencial)</b><br>${ptz.id}`)
+  .addTo(layerConos);
+
+/** =========================
+ *  Control de capas
+ *  ========================= */
+L.control.layers(null, {
+  "Perímetro (referencial)": layerPerimetro,
+  "Gates": layerGates,
+  "Garitas": layerGaritas,
+  "Cámaras (CCTV)": layerCamaras,
+  "PTZ": layerPTZ,
+  "Conos / Ángulos (FOV)": layerConos
+}, { collapsed: false }).addTo(map);
+
+// encuadre al perímetro
+map.fitBounds(perimetro.getBounds());
+</script>
+</body>
+</html>
